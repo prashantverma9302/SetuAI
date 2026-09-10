@@ -1,0 +1,254 @@
+{
+  "_note": "SYNTHETIC DEMO DATA. Every address, tx hash, amount and timestamp in this file is fabricated for local testing. Addresses are plausible-looking but are NOT checksum-valid, and nothing here reflects real on-chain activity -- no named exchange has actually received these funds. Replace this file with your own fixture from the research doc; the tracer depends only on the shape below, not on the values.",
+  "_shape": {
+    "cases": "map of starting wallet address -> case object",
+    "hop.node_type": "one of: unknown_eoa | peel_chain | bridge | mixer | dex | deposit_address | hot_wallet",
+    "destination.jurisdiction": "domestic | foreign | unknown",
+    "destination.fiu_ind_registered": "true if the VASP is a registered reporting entity with FIU-IND; drives the foreign routing split between SAHYOG and MLAT",
+    "destination.label_last_seen_days": "age of the attribution label in days; feeds the freshness bonus in scoring.py",
+    "linkage": "hop[n].from_address == hop[n-1].to_address, EXCEPT across a bridge hop where the chain changes and the link is inferred, not on-chain"
+  },
+  "cases": {
+    "bc1qh4kl29xr7vt0m3qeuz8fj6ldw5s0navxp2yqte": {
+      "chain": "BTC",
+      "case_note": "Worked example: four-leg peel chain on BTC, bridge hop to EVM, then exchange deposit address -> hot wallet. Terminates at an attributable VASP, so this is a clean_path carrying a bridge penalty.",
+      "hops": [
+        {
+          "seq": 1,
+          "chain": "BTC",
+          "from_address": "bc1qh4kl29xr7vt0m3qeuz8fj6ldw5s0navxp2yqte",
+          "to_address": "bc1q0d7ymwu4v9pzc6ns3axjt8lqe5rk2hgf0vxdm7",
+          "tx_hash": "9f3c1ab7e04d5286c7fa1b93de0472c5518aa6d0937be41cf2a8e7150d63bb84",
+          "timestamp": "2026-08-14T09:12:44Z",
+          "value": "1.84210000",
+          "asset": "BTC",
+          "node_type": "peel_chain",
+          "label": null
+        },
+        {
+          "seq": 2,
+          "chain": "BTC",
+          "from_address": "bc1q0d7ymwu4v9pzc6ns3axjt8lqe5rk2hgf0vxdm7",
+          "to_address": "bc1qz85twn3rvq0jl6xd2mck9saeh7fu4gyp3tnw5",
+          "tx_hash": "c15e7d2098b3af64175ec8d3b029ff4a6e70c1953db8244af0e6b7159c3ad271",
+          "timestamp": "2026-08-14T11:48:02Z",
+          "value": "1.71050000",
+          "asset": "BTC",
+          "node_type": "peel_chain",
+          "label": null
+        },
+        {
+          "seq": 3,
+          "chain": "BTC",
+          "from_address": "bc1qz85twn3rvq0jl6xd2mck9saeh7fu4gyp3tnw5",
+          "to_address": "bc1qmr6t0eak93wsvz7x2yln8dqu5cf4jh0pg5stnq",
+          "tx_hash": "4a80b3ff61c7e25d9038ab7c1fe5240d83b9017ca6ed4f2b95c380e7fa1d6c39",
+          "timestamp": "2026-08-15T03:27:19Z",
+          "value": "1.62930000",
+          "asset": "BTC",
+          "node_type": "peel_chain",
+          "label": null
+        },
+        {
+          "seq": 4,
+          "chain": "BTC",
+          "from_address": "bc1qmr6t0eak93wsvz7x2yln8dqu5cf4jh0pg5stnq",
+          "to_address": "bc1q7wlc2nd80vjhs5ez3xk9tfa4qmr6gyu0pdv3ae",
+          "tx_hash": "e27d9c0451ba8f36207de1c9b4a05f83916cd72e0fb35481ac6e290d7b18f5a0",
+          "timestamp": "2026-08-15T14:05:53Z",
+          "value": "1.55480000",
+          "asset": "BTC",
+          "node_type": "bridge",
+          "label": "Cross-chain bridge deposit (BTC leg)"
+        },
+        {
+          "seq": 5,
+          "chain": "ETH",
+          "from_address": "0x8b21c4f70d5e3a9146bd027ce8f5137a90ecb44d",
+          "to_address": "0x3f9a05e7c1bd482630af7195ce0d8b64712fa0c9",
+          "tx_hash": "0x7d1e4ac95036fb28e0c7a4d51397bf60821ce3da94f5b071c68e2a3057d419bc",
+          "timestamp": "2026-08-15T14:41:07Z",
+          "value": "48.9120",
+          "asset": "WBTC",
+          "node_type": "unknown_eoa",
+          "label": null,
+          "note": "Bridge payout on the EVM side. Link to hop 4 is inferred from amount and timing, not from an on-chain edge."
+        },
+        {
+          "seq": 6,
+          "chain": "ETH",
+          "from_address": "0x3f9a05e7c1bd482630af7195ce0d8b64712fa0c9",
+          "to_address": "0xc60d7e2a95183bf40ce7192da8506b3fc4917ea8",
+          "tx_hash": "0x2b8f60d3e19a7c05481fd2be3097ca6415d0783e9fb2c641a05e8d37b6402fc1",
+          "timestamp": "2026-08-16T06:19:35Z",
+          "value": "48.7005",
+          "asset": "WBTC",
+          "node_type": "deposit_address",
+          "label": "Exchange deposit address (attributed)"
+        },
+        {
+          "seq": 7,
+          "chain": "ETH",
+          "from_address": "0xc60d7e2a95183bf40ce7192da8506b3fc4917ea8",
+          "to_address": "0x9dfa1b7c04e5382a6710bd93cf8e2405da61739b",
+          "tx_hash": "0x5c0aeb349d17f286035ba9e1c74d0f6218937ecab05d4f2196e83c70da1b6f45",
+          "timestamp": "2026-08-16T06:52:11Z",
+          "value": "48.7005",
+          "asset": "WBTC",
+          "node_type": "hot_wallet",
+          "label": "Binance hot wallet"
+        }
+      ],
+      "destination": {
+        "label": "Binance hot wallet",
+        "vasp_name": "Binance",
+        "node_type": "hot_wallet",
+        "jurisdiction": "foreign",
+        "fiu_ind_registered": true,
+        "label_last_seen_days": 3,
+        "label_source": "internal_watchlist"
+      }
+    },
+    "bc1qv3n0xu7ld82ksrq9caw5te6f4yhm40pjz8gvd": {
+      "chain": "BTC",
+      "case_note": "Dead-end example: two ordinary hops, then the trail terminates in a coinjoin coordinator with no attributable next hop.",
+      "hops": [
+        {
+          "seq": 1,
+          "chain": "BTC",
+          "from_address": "bc1qv3n0xu7ld82ksrq9caw5te6f4yhm40pjz8gvd",
+          "to_address": "bc1qs06rte4x9nw3kd8lv2ug7yjs5fma0che2pdqz",
+          "tx_hash": "b3f70ea15d2946c8017bde35a9f024c761e08d3b57ca9142fe6b0d8397a2c150",
+          "timestamp": "2026-08-21T18:33:10Z",
+          "value": "0.94700000",
+          "asset": "BTC",
+          "node_type": "unknown_eoa",
+          "label": null
+        },
+        {
+          "seq": 2,
+          "chain": "BTC",
+          "from_address": "bc1qs06rte4x9nw3kd8lv2ug7yjs5fma0che2pdqz",
+          "to_address": "bc1q84mdz0kc7ynr5v4eltx36ghsa9pw2uf0j5rqe",
+          "tx_hash": "7c1a9df6035be284107fca9d2e4b6350819fd07ea3c5b241096ef8d3b7150ac2",
+          "timestamp": "2026-08-22T02:07:44Z",
+          "value": "0.94120000",
+          "asset": "BTC",
+          "node_type": "unknown_eoa",
+          "label": null
+        },
+        {
+          "seq": 3,
+          "chain": "BTC",
+          "from_address": "bc1q84mdz0kc7ynr5v4eltx36ghsa9pw2uf0j5rqe",
+          "to_address": "bc1qd52wgk08nfj7xu3ea9mzv9pcr6ke0lyd4sdhtq",
+          "tx_hash": "1e6b0c73f9a5d2408b17ec3da05f9147c2b8360ed7fa9451c30e2b8756df1a09",
+          "timestamp": "2026-08-22T09:15:58Z",
+          "value": "0.93850000",
+          "asset": "BTC",
+          "node_type": "mixer",
+          "label": "CoinJoin coordinator (mixer)"
+        }
+      ],
+      "destination": {
+        "label": "CoinJoin coordinator (mixer)",
+        "vasp_name": null,
+        "node_type": "mixer",
+        "jurisdiction": "unknown",
+        "fiu_ind_registered": null,
+        "label_last_seen_days": 412,
+        "label_source": "public_heuristic"
+      }
+    },
+    "0x7c3e0a9d15b846f207ea9c31d5806bf4e2917da6": {
+      "chain": "ETH",
+      "case_note": "Foreign-no-nexus example: lands on an offshore exchange that is NOT an FIU-IND registered reporting entity, so it routes to preservation + MLAT rather than SAHYOG. NordVault is a fictional entity.",
+      "hops": [
+        {
+          "seq": 1,
+          "chain": "ETH",
+          "from_address": "0x7c3e0a9d15b846f207ea9c31d5806bf4e2917da6",
+          "to_address": "0x2f8b19e05c7a46d3018fe95b4ac7d06319f2ea84",
+          "tx_hash": "0x6b19f0a34d82e75c091ab73de5f40286c7e1935dab04f628915ce7a30d47b12f",
+          "timestamp": "2026-09-03T12:18:07Z",
+          "value": "5.9100",
+          "asset": "ETH",
+          "node_type": "unknown_eoa",
+          "label": null
+        },
+        {
+          "seq": 2,
+          "chain": "ETH",
+          "from_address": "0x2f8b19e05c7a46d3018fe95b4ac7d06319f2ea84",
+          "to_address": "0xa41d09e6b25c78f3014ed82b9c56f70d3e18a5c7",
+          "tx_hash": "0x9e04c1b73d5a862f10ce7d39ab40521863ea07dc194b3f6205ae8d71c630b48d",
+          "timestamp": "2026-09-03T19:52:41Z",
+          "value": "5.8840",
+          "asset": "ETH",
+          "node_type": "deposit_address",
+          "label": "Exchange deposit address (attributed)"
+        },
+        {
+          "seq": 3,
+          "chain": "ETH",
+          "from_address": "0xa41d09e6b25c78f3014ed82b9c56f70d3e18a5c7",
+          "to_address": "0x53fb8e01a7d6c24095be7d31fa0c86413e2d9750",
+          "tx_hash": "0x1d7ae0c9435f682019cd4a7be503f1826a09e37dc5b41f0928e6a35d70c194b9",
+          "timestamp": "2026-09-04T04:31:16Z",
+          "value": "5.8840",
+          "asset": "ETH",
+          "node_type": "hot_wallet",
+          "label": "NordVault Exchange hot wallet"
+        }
+      ],
+      "destination": {
+        "label": "NordVault Exchange hot wallet",
+        "vasp_name": "NordVault Exchange",
+        "node_type": "hot_wallet",
+        "jurisdiction": "foreign",
+        "fiu_ind_registered": false,
+        "label_last_seen_days": 62,
+        "label_source": "public_heuristic"
+      }
+    },
+    "0x41e7b2d0956ac3f8107de24b9c5031fa680d7e93": {
+      "chain": "ETH",
+      "case_note": "Domestic example: short, direct path with no mixer or bridge, landing on an India-registered VASP. Should score high and route domestic.",
+      "hops": [
+        {
+          "seq": 1,
+          "chain": "ETH",
+          "from_address": "0x41e7b2d0956ac3f8107de24b9c5031fa680d7e93",
+          "to_address": "0xb7fa0c8e214d63975fe0a81c4d29b0537ea16fc4",
+          "tx_hash": "0x8e2c05f7a19d364b0fe7c1385a92db406751fc3ea0b98d247c1e60f395ab7d21",
+          "timestamp": "2026-09-01T07:44:26Z",
+          "value": "12.4400",
+          "asset": "USDT",
+          "node_type": "deposit_address",
+          "label": "Exchange deposit address (attributed)"
+        },
+        {
+          "seq": 2,
+          "chain": "ETH",
+          "from_address": "0xb7fa0c8e214d63975fe0a81c4d29b0537ea16fc4",
+          "to_address": "0x6ad03e19c7b45f28017da95e3cb60f4718293da5",
+          "tx_hash": "0x3a95d0c7e186fb42095ce7a31d08bf6427e0951dac37b208e15f6c904db73a18",
+          "timestamp": "2026-09-01T08:02:39Z",
+          "value": "12.4400",
+          "asset": "USDT",
+          "node_type": "hot_wallet",
+          "label": "CoinDCX hot wallet"
+        }
+      ],
+      "destination": {
+        "label": "CoinDCX hot wallet",
+        "vasp_name": "CoinDCX",
+        "node_type": "hot_wallet",
+        "jurisdiction": "domestic",
+        "fiu_ind_registered": true,
+        "label_last_seen_days": 11,
+        "label_source": "internal_watchlist"
+      }
+    }
+  }
+}
