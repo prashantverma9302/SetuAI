@@ -109,7 +109,7 @@ function Field({ label, children }) {
   )
 }
 
-function Result({ data }) {
+function Result({ data, onDownloadPdf, downloading }) {
   const foreign = data.jurisdiction === 'foreign'
   const domestic = data.jurisdiction === 'domestic'
 
@@ -126,10 +126,20 @@ function Result({ data }) {
               {data.wallet_address}
             </p>
           </div>
-          <ConfidenceBadge
-            score={data.confidence}
-            band={data.confidence_breakdown.band}
-          />
+          <div className="flex flex-wrap items-center gap-3">
+            <ConfidenceBadge
+              score={data.confidence}
+              band={data.confidence_breakdown.band}
+            />
+            <button
+              type="button"
+              disabled={downloading}
+              onClick={onDownloadPdf}
+              className="rounded bg-slate-900 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+            >
+              {downloading ? 'Preparing PDF…' : 'Download PDF'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -254,6 +264,7 @@ const CASE_FIELDS = [
 ]
 
 const DOWNLOAD_FORMATS = [
+  { format: 'pdf', label: 'PDF' },
   { format: 'md', label: 'Markdown' },
   { format: 'html', label: 'HTML (print to PDF)' },
   { format: 'json', label: 'JSON' },
@@ -441,6 +452,42 @@ export default function App() {
     }
   }
 
+  async function downloadPdf() {
+    if (!result) return
+
+    setDownloading(true)
+    setError(null)
+    try {
+      const response = await fetch(`${API_BASE}/report/download?format=pdf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wallet_address: result.wallet_address,
+          chain: result.chain,
+          case: {},
+        }),
+      })
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload.detail ?? 'Could not generate the PDF report.')
+      }
+
+      const blob = await response.blob()
+      const downloadUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = downloadUrl
+      link.download = `wallet-attribution-${result.wallet_address.slice(0, 12)}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(downloadUrl)
+    } catch (downloadError) {
+      setError(downloadError.message)
+    } finally {
+      setDownloading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
       <header className="border-b border-slate-300 bg-white">
@@ -449,7 +496,7 @@ export default function App() {
             VASP Attribution
           </h1>
           <p className="mt-0.5 text-sm text-slate-500">
-            SIH26182 · prototype · fixture-backed, read-only
+            Trace wallet addresses across multiple chains
           </p>
         </div>
       </header>
@@ -514,7 +561,13 @@ export default function App() {
           </div>
         )}
 
-        {result && <Result data={result} />}
+        {result && (
+          <Result
+            data={result}
+            onDownloadPdf={downloadPdf}
+            downloading={downloading}
+          />
+        )}
 
         {!result && !error && (
           <p className="mt-10 text-center text-sm text-slate-400">

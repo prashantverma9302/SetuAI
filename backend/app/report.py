@@ -21,9 +21,17 @@ standard library.
 import hashlib
 import html
 import json
+import re
+from io import BytesIO
 from datetime import datetime, timezone
 from string import Template
 from typing import Any, Dict
+
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import mm
+from reportlab.platypus import Paragraph, Preformatted, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from . import legal
 
@@ -473,7 +481,103 @@ def render_json(report: Dict[str, Any]) -> str:
     return json.dumps(report, indent=2, ensure_ascii=False) + "\n"
 
 
+def render_pdf(report: Dict[str, Any]) -> bytes:
+    """Render the complete report as a portable, directly downloadable PDF."""
+    findings = report["findings"]
+    breakdown = findings.get("confidence_breakdown") or {}
+    instrument = report["legal_instrument"]
+    case = report.get("case") or {}
+    integrity = report["integrity"]
+    buffer = BytesIO()
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name="ReportTitle", parent=styles["Title"], fontSize=18, leading=22, textColor=colors.HexColor("#0f172a"), spaceAfter=4))
+    styles.add(ParagraphStyle(name="Section", parent=styles["Heading2"], fontSize=11, leading=14, textColor=colors.HexColor("#334155"), spaceBefore=12, spaceAfter=6))
+    styles.add(ParagraphStyle(name="BodySmall", parent=styles["BodyText"], fontSize=8.5, leading=11, spaceAfter=3))
+    styles.add(ParagraphStyle(name="TableText", parent=styles["BodyText"], fontSize=7.5, leading=9))
+    styles.add(ParagraphStyle(name="MonoSmall", parent=styles["Code"], fontName="Courier", fontSize=7, leading=9, wordWrap="CJK"))
+
+    def text(value: Any) -> str:
+        replacements = {"→": "->", "—": "-", "–": "-", "·": "|", "’": "'", "“": '"', "”": '"'}
+        return re.sub(r"[^\x00-\x7f]", lambda match: replacements.get(match.group(), "?"), str(value or ""))
+
+    def p(value: Any, style="TableText") -> Paragraph:
+        return Paragraph(html.escape(text(value)).replace("\n", "<br/>"), styles[style])
+
+    def table(rows, widths=None):
+        rendered = [[p(cell) for cell in row] for row in rows]
+        result = Table(rendered, colWidths=widths, repeatRows=1)
+        result.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e2e8f0")),
+            ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#cbd5e1")),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ]))
+        return result
+
+    story = [
+        Paragraph("Wallet Attribution Report", styles["ReportTitle"]),
+        Paragraph(text(f"{report['report_id']} | generated {report['generated_at']} UTC | {report['tool']['name']} v{report['tool']['version']}"), styles["BodySmall"]),
+    ]
+    if report["review_required"]:
+        story += [Spacer(1, 4), p(f"SUPERVISORY REVIEW REQUIRED - confidence is below {report['review_threshold']}/100. This draft is not cleared for service without supervisory approval.", "BodySmall")]
+
+    story += [Paragraph("1. Case", styles["Section"]), table([
+        ["Field", "Value"],
+        ["FIR / DD entry", case.get("fir_number") or "not supplied"],
+        ["Police station", case.get("police_station") or "not supplied"],
+        ["District", case.get("district") or "not supplied"],
+        ["Investigating officer", case.get("officer_name") or "not supplied"],
+        ["Designation", case.get("officer_designation") or "not supplied"],
+    ], [52 * mm, 125 * mm])]
+
+    story += [Paragraph("2. Attribution finding", styles["Section"]), table([
+        ["Field", "Value"],
+        ["Subject wallet", findings["wallet_address"]],
+        ["Chain", findings["chain"]],
+        ["Destination", findings.get("destination_label") or "-"],
+        ["VASP", findings.get("vasp_name") or "Not attributed"],
+        ["Terminal node type", findings.get("destination_node_type")],
+        ["Jurisdiction", str(findings.get("jurisdiction")).upper()],
+        ["FIU-IND registered", _yes_no(findings.get("fiu_ind_registered"))],
+        ["Status", findings.get("status")],
+        ["Confidence", f"{findings.get('confidence')}/100 ({breakdown.get('band')})"],
+        ["Path", f"{findings.get('hop_count')} hops | {' -> '.join(findings.get('chains_traversed') or [])}"],
+    ], [52 * mm, 125 * mm])]
+    if findings.get("recommended_action"):
+        story += [p(f"Recommended action: {findings['recommended_action']}", "BodySmall")]
+
+    story += [Paragraph("3. How the confidence score was reached", styles["Section"]), table(
+        [["Points", "Component", "Reason"]] + [
+            [f"{'+' if item['points'] > 0 else ''}{item['points']}", item["name"], item["reason"]]
+            for item in breakdown.get("components", [])
+        ], [18 * mm, 45 * mm, 114 * mm]),
+        p(f"Total: {findings.get('confidence')}/100 - clamped to 0-100. Deterministic: identical inputs always produce this score.", "BodySmall")]
+
+    story += [Paragraph("4. Traced path", styles["Section"]), table(
+        [["#", "Chain", "From", "To", "Value", "Node type", "Label"]] + [
+            [hop["seq"], hop["chain"], hop["from_address"], hop["to_address"], f"{hop['value']} {hop['asset']}", hop["node_type"], hop.get("label") or "-"]
+            for hop in findings.get("hops") or []
+        ], [8 * mm, 14 * mm, 35 * mm, 35 * mm, 24 * mm, 25 * mm, 36 * mm])]
+
+    story += [Paragraph("5. Legal instrument selected", styles["Section"]), table([
+        ["Field", "Value"],
+        ["Instrument", instrument["short_name"]],
+        ["Statutory basis", instrument["statute"]],
+        ["Route", instrument["route"]],
+        ["Response window", instrument["response_window"]],
+    ], [52 * mm, 125 * mm]), p(f"Why this instrument: {instrument['why']}", "BodySmall"), Paragraph("Draft - requires officer review and signature", styles["Section"]), Preformatted(text(report["draft_body"]), styles["MonoSmall"])]
+
+    story += [Paragraph("6. Integrity", styles["Section"]), Preformatted(text(f"Algorithm      : {integrity['algorithm']}\nFindings hash  : {integrity['findings_hash']}\nDocument hash  : {integrity['document_hash']}"), styles["MonoSmall"]), p(f"Findings hash covers: {integrity['findings_hash_covers']}", "BodySmall"), p(f"Document hash covers: {integrity['document_hash_covers']}", "BodySmall"), Paragraph("7. Limitations", styles["Section"])]
+    story.extend([p(f"- {item}", "BodySmall") for item in report["limitations"]])
+    SimpleDocTemplate(buffer, pagesize=A4, rightMargin=17 * mm, leftMargin=17 * mm, topMargin=15 * mm, bottomMargin=15 * mm, title="Wallet Attribution Report").build(story)
+    return buffer.getvalue()
+
+
 RENDERERS = {
+    "pdf": (render_pdf, "application/pdf", "pdf"),
     "md": (render_markdown, "text/markdown; charset=utf-8", "md"),
     "html": (render_html, "text/html; charset=utf-8", "html"),
     "json": (render_json, "application/json; charset=utf-8", "json"),

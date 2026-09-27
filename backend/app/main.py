@@ -3,7 +3,7 @@
 Endpoints:
   POST /trace            attribution findings for a wallet
   POST /report           findings + selected legal instrument + hashes
-  POST /report/download  the same report rendered as md / html / json
+    POST /report/download  the same report rendered as md / html / json / pdf
   GET  /cases            fixture addresses, for the demo picker
   GET  /health           liveness
 """
@@ -104,7 +104,7 @@ def build_report(request: ReportRequest) -> dict:
 @app.post("/report/download")
 def download_report(
     request: ReportRequest,
-    format: str = Query(default="md", pattern="^(md|html|json)$"),
+    format: str = Query(default="md", pattern="^(md|html|json|pdf)$"),
 ) -> Response:
     """The same report as a downloadable file.
 
