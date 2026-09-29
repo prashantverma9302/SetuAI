@@ -1,6 +1,14 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 
 const API_BASE = 'http://localhost:8010'
+const Plot = lazy(async () => {
+  const [{ default: createPlotlyComponent }, { default: Plotly }] =
+    await Promise.all([
+      import('react-plotly.js/factory'),
+      import('plotly.js-dist-min'),
+    ])
+  return { default: createPlotlyComponent(Plotly) }
+})
 
 // Chip styling per node type. Obstacles read warm, attributed nodes read cool.
 const NODE_STYLES = {
@@ -109,6 +117,182 @@ function Field({ label, children }) {
   )
 }
 
+function HopGraph({ hops }) {
+  const chainOrder = [...new Set(hops.map((hop) => hop.chain))]
+  const chainY = (chain) => (chainOrder.length - 1) / 2 - chainOrder.indexOf(chain)
+  const nodes = []
+  const nodeIndexes = new Map()
+  const links = []
+  const chartHeight = Math.max(280, chainOrder.length * 170)
+  const nodeColors = {
+    unknown_eoa: '#64748b',
+    peel_chain: '#94a3b8',
+    deposit_address: '#0284c7',
+    hot_wallet: '#059669',
+    bridge: '#d97706',
+    dex: '#ea580c',
+    mixer: '#e11d48',
+  }
+
+  function addNode(chain, address, nodeType, x) {
+    const key = `${chain}:${address}`
+    if (!nodeIndexes.has(key)) {
+      nodeIndexes.set(key, nodes.length)
+      nodes.push({
+        label: `${chain} ${truncate(address, 3, 3)}`,
+        address,
+        chain,
+        nodeType,
+        color: nodeColors[nodeType] ?? nodeColors.unknown_eoa,
+        x,
+        y: chainY(chain),
+      })
+    }
+    return nodeIndexes.get(key)
+  }
+
+  hops.forEach((hop, index) => {
+    const source = addNode(hop.chain, hop.from_address, 'unknown_eoa', index)
+    const target = addNode(hop.chain, hop.to_address, hop.node_type, index + 1)
+    links.push({
+      source,
+      target,
+      color: '#64748b',
+      dash: 'solid',
+      detail: `Hop ${hop.seq} · ${hop.chain} · ${hop.value} ${hop.asset}`,
+      tx: hop.tx_hash,
+      timestamp: hop.timestamp,
+      note: hop.note ?? '',
+    })
+
+    const nextHop = hops[index + 1]
+    if (hop.node_type === 'bridge' && nextHop && hop.chain !== nextHop.chain) {
+      const bridgeOutput = addNode(
+        nextHop.chain,
+        nextHop.from_address,
+        'bridge',
+        index + 1,
+      )
+      links.push({
+        source: target,
+        target: bridgeOutput,
+        color: '#d97706',
+        dash: 'dash',
+        detail: `Inferred bridge link · ${hop.chain} to ${nextHop.chain}`,
+        tx: '',
+        timestamp: '',
+        note: nextHop.note ?? 'Cross-chain relationship inferred',
+      })
+    }
+  })
+
+  const linkTraces = links.map((link) => {
+    const source = nodes[link.source]
+    const target = nodes[link.target]
+    return {
+      type: 'scatter',
+      mode: 'lines',
+      x: [source.x, target.x],
+      y: [source.y, target.y],
+      line: { color: link.color, width: 2, dash: link.dash },
+      hoverinfo: 'skip',
+      showlegend: false,
+    }
+  })
+  const nodeTrace = {
+    type: 'scatter',
+    mode: 'markers+text',
+    x: nodes.map((node) => node.x),
+    y: nodes.map((node) => node.y),
+    text: nodes.map((node) => node.label),
+    textposition: 'top center',
+    textfont: { size: 10 },
+    marker: {
+      size: 18,
+      color: nodes.map((node) => node.color),
+      line: { color: '#ffffff', width: 2 },
+    },
+    customdata: nodes.map((node) => [node.chain, node.address, node.nodeType]),
+    hovertemplate:
+      '%{customdata[0]}<br>%{customdata[1]}<br>Node type: %{customdata[2]}<extra></extra>',
+    showlegend: false,
+  }
+  const linkHoverTrace = {
+    type: 'scatter',
+    mode: 'markers',
+    x: links.map((link) => (nodes[link.source].x + nodes[link.target].x) / 2),
+    y: links.map((link) => (nodes[link.source].y + nodes[link.target].y) / 2),
+    marker: {
+      size: 12,
+      color: links.map((link) => link.color),
+      opacity: 0.65,
+    },
+    customdata: links.map((link) => [
+      link.detail,
+      link.tx,
+      link.timestamp,
+      link.note,
+    ]),
+    hovertemplate:
+      '%{customdata[0]}<br>Transaction: %{customdata[1]}<br>%{customdata[2]}<br>%{customdata[3]}<extra></extra>',
+    showlegend: false,
+  }
+  const annotations = links.map((link) => {
+    const source = nodes[link.source]
+    const target = nodes[link.target]
+    const distance = Math.hypot(target.x - source.x, target.y - source.y) || 1
+    return {
+      x: target.x - ((target.x - source.x) / distance) * 0.2,
+      y: target.y - ((target.y - source.y) / distance) * 0.2,
+      ax: source.x,
+      ay: source.y,
+      xref: 'x',
+      yref: 'y',
+      axref: 'x',
+      ayref: 'y',
+      showarrow: true,
+      arrowhead: 3,
+      arrowsize: 1,
+      arrowwidth: 1.5,
+      arrowcolor: link.color,
+    }
+  })
+
+  return (
+    <Suspense fallback={<div className="h-64 animate-pulse bg-slate-50" />}>
+      <Plot
+        data={[...linkTraces, nodeTrace, linkHoverTrace]}
+        layout={{
+          autosize: true,
+          height: chartHeight,
+          margin: { l: 60, r: 32, t: 38, b: 32 },
+          font: { family: 'ui-monospace, SFMono-Regular, Menlo, monospace', size: 11 },
+          xaxis: {
+            range: [-0.5, hops.length + 0.5],
+            showgrid: false,
+            zeroline: false,
+            showticklabels: false,
+            fixedrange: true,
+          },
+          yaxis: {
+            range: [-(chainOrder.length / 2), chainOrder.length / 2],
+            tickmode: 'array',
+            tickvals: chainOrder.map((chain) => chainY(chain)),
+            ticktext: chainOrder,
+            showgrid: false,
+            zeroline: false,
+            fixedrange: true,
+          },
+          annotations,
+        }}
+        config={{ responsive: true, displaylogo: false }}
+        style={{ width: '100%', minWidth: '720px', height: `${chartHeight}px` }}
+        useResizeHandler
+      />
+    </Suspense>
+  )
+}
+
 function Result({ data, onDownloadPdf, downloading }) {
   const foreign = data.jurisdiction === 'foreign'
   const domestic = data.jurisdiction === 'domestic'
@@ -199,6 +383,19 @@ function Result({ data, onDownloadPdf, downloading }) {
               </li>
             ))}
           </ul>
+        </section>
+
+        {/* Hop graph */}
+        <section>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Transaction flow
+          </h3>
+          <div className="mt-2 overflow-x-auto rounded border border-slate-200 bg-white p-2">
+            <HopGraph hops={data.hops} />
+          </div>
+          <p className="mt-1 text-xs text-slate-500">
+            Solid arrows are traced hops; dashed arrows mark inferred bridge links.
+          </p>
         </section>
 
         {/* Hops */}
