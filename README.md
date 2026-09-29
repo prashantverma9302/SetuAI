@@ -42,9 +42,11 @@ cd E:\SIH26182\backend && python -m venv .venv && .venv\Scripts\python.exe -m pi
 ```
 backend/
   fixtures/trace_fixtures.json   the ONE fixture file — all demo data lives here
+  data/watchlist.json            synthetic risk watchlist; not an intelligence feed
   app/models.py                  Pydantic request/response contract
   app/tracer.py                  fixture lookup, returns the hop sequence
   app/scoring.py                 weighted confidence sum
+  app/risk_classification.py     independent explainable risk rules and score
   app/deadend.py                 terminal-node check + recommended_action
   app/main.py                    FastAPI app: POST /trace, GET /cases, GET /health
 frontend/
@@ -63,7 +65,11 @@ frontend/
 
 Returns the hops, the destination label, a 0–100 confidence score with its
 full breakdown, a `domestic`/`foreign`/`unknown` flag, a
-`clean_path`/`dead_end` status, and a `recommended_action` when the path dies.
+`clean_path`/`dead_end` status, a separate `risk_classification` object, and a
+`recommended_action` when the path dies. Risk contains a 0–100 score, tier,
+matched typology flags, and per-rule explanations. It is independent of
+attribution confidence: confidence estimates whether the VASP attribution is
+correct; risk summarizes suspicious patterns in the traced flow.
 
 Unknown address → `404` with a message pointing at `GET /cases`.
 
@@ -79,16 +85,41 @@ code change.
 
 ---
 
-## The three fixture cases
+## Fixture cases
 
 | Start address | Path | Result |
 |---|---|---|
 | `bc1qh4kl29xr7v…` | BTC 4-leg peel → bridge → EVM → exchange | **55** · foreign · `clean_path` |
 | `bc1qv3n0xu7ld8…` | BTC → 2 hops → coinjoin | **23** · unknown · `dead_end` |
+| `0x7c3e0a9d15…917da6` | ETH → offshore exchange | **66** · foreign · `clean_path` |
 | `0x41e7b2d0956a…` | ETH → deposit → hot wallet | **80** · domestic · `clean_path` |
+| `bc1qrapidmix…` | BTC rapid hops → mixer | **High risk** · mixer + rapid-hop rules |
+| `0x7f3c9a1d5e…` | ETH → sample watchlist address → VASP | **Critical risk** · watchlist match |
 
-Chosen so all three confidence bands and both statuses are visible without
+Chosen so confidence bands, path statuses, and risk tiers are demoable without
 editing anything.
+
+---
+
+## Risk classification
+
+`risk_classification.py` evaluates the traced hops with independent, deterministic
+rules: mixer or unlabeled-DEX exposure; three or more timestamps within ten
+minutes; two or more bridge hops; a hop value above the configurable
+`HIGH_VALUE_THRESHOLD` (default 100000); and addresses matching
+`backend/data/watchlist.json`. Rule functions can be tested independently.
+Matched rules contribute transparent points (capped at 100); a watchlist match
+sets the tier to **Critical**, two or more other matched rules to **High**, one
+to **Medium**, and none to **Low**. The response includes the score, flags, and
+rule explanations separately from confidence.
+
+**The watchlist is synthetic sample data for demonstrating the risk-scoring
+architecture only.** Its fabricated addresses and labels are not allegations,
+not verified matches, and not a real intelligence feed. For production, replace
+it with a vetted, maintained source such as applicable OFAC SDN data or licensed
+provider labels (for example Arkham), subject to legal, licensing, provenance,
+and false-positive review. Production high-value rules should also normalize
+asset amounts to a common fiat value before applying a shared threshold.
 
 ---
 

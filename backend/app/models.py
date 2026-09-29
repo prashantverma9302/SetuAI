@@ -17,6 +17,7 @@ NodeType = Literal[
     "bridge",
     "mixer",
     "dex",
+    "unlabeled_dex",
     "deposit_address",
     "hot_wallet",
 ]
@@ -55,6 +56,13 @@ class ConfidenceBreakdown(BaseModel):
     components: List[ScoreComponent]
 
 
+class RiskClassification(BaseModel):
+    risk_tier: Literal["Low", "Medium", "High", "Critical"]
+    risk_flags: List[str]
+    risk_score: int = Field(..., ge=0, le=100)
+    components: List[ScoreComponent]
+
+
 class TraceResponse(BaseModel):
     wallet_address: str
     chain: str
@@ -69,6 +77,7 @@ class TraceResponse(BaseModel):
 
     confidence: int
     confidence_breakdown: ConfidenceBreakdown
+    risk_classification: RiskClassification
 
     jurisdiction: Jurisdiction
     fiu_ind_registered: Optional[bool] = None

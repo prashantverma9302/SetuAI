@@ -34,6 +34,7 @@ OBSTACLE_PENALTIES: Dict[str, Tuple[int, str]] = {
     "mixer": (-35, "funds passed through a mixer, breaking the deterministic link"),
     "bridge": (-15, "cross-chain bridge hop; the link is inferred, not on-chain"),
     "dex": (-10, "DEX swap obscures the one-to-one input/output mapping"),
+    "unlabeled_dex": (-10, "unlabeled DEX swap obscures the input/output mapping"),
 }
 
 HIGH_BAND = 70

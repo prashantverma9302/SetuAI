@@ -18,6 +18,7 @@ const NODE_STYLES = {
   hot_wallet: 'bg-emerald-50 text-emerald-800 ring-emerald-300',
   bridge: 'bg-amber-50 text-amber-900 ring-amber-400',
   dex: 'bg-amber-50 text-amber-900 ring-amber-400',
+  unlabeled_dex: 'bg-amber-50 text-amber-900 ring-amber-400',
   mixer: 'bg-rose-50 text-rose-900 ring-rose-400',
 }
 
@@ -28,6 +29,7 @@ const NODE_LABELS = {
   hot_wallet: 'hot wallet',
   bridge: 'bridge',
   dex: 'DEX',
+  unlabeled_dex: 'unlabeled DEX',
   mixer: 'mixer',
 }
 
@@ -35,6 +37,13 @@ const BAND_STYLES = {
   high: 'bg-emerald-600 text-white',
   medium: 'bg-amber-500 text-white',
   low: 'bg-rose-600 text-white',
+}
+
+const RISK_STYLES = {
+  Low: 'bg-emerald-600 text-white',
+  Medium: 'bg-amber-500 text-white',
+  High: 'bg-rose-600 text-white',
+  Critical: 'bg-red-950 text-white',
 }
 
 function truncate(value, head = 10, tail = 8) {
@@ -63,6 +72,21 @@ function ConfidenceBadge({ score, band }) {
       </span>
       <span className="text-xs uppercase tracking-wide text-slate-500">
         / 100 · {band} confidence
+      </span>
+    </div>
+  )
+}
+
+function RiskBadge({ classification }) {
+  return (
+    <div className="flex items-baseline gap-2">
+      <span
+        className={`rounded px-3 py-1 text-sm font-semibold ${RISK_STYLES[classification.risk_tier]}`}
+      >
+        {classification.risk_tier} risk
+      </span>
+      <span className="text-xs tabular-nums text-slate-500">
+        {classification.risk_score}/100
       </span>
     </div>
   )
@@ -131,6 +155,7 @@ function HopGraph({ hops }) {
     hot_wallet: '#059669',
     bridge: '#d97706',
     dex: '#ea580c',
+    unlabeled_dex: '#ea580c',
     mixer: '#e11d48',
   }
 
@@ -315,6 +340,7 @@ function Result({ data, onDownloadPdf, downloading }) {
               score={data.confidence}
               band={data.confidence_breakdown.band}
             />
+            <RiskBadge classification={data.risk_classification} />
             <button
               type="button"
               disabled={downloading}

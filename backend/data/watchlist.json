@@ -1,0 +1,20 @@
+{
+  "_note": "SYNTHETIC DEMO DATA ONLY. These addresses and labels are fabricated and are not a real intelligence feed or allegations about real entities. Replace with a vetted, licensed source before production use.",
+  "entries": [
+    {
+      "address": "0x9a71c4e2058b63f10d2a74c9e1385f60b4271d83",
+      "typology": "ransomware",
+      "label": "Sample ransomware cluster"
+    },
+    {
+      "address": "bc1qdarknetdemo8f4m2k6v9x3c7n5p1r0t4w6y8z2a",
+      "typology": "darknet_market",
+      "label": "Sample darknet-market cluster"
+    },
+    {
+      "address": "0x6d82f1a9037c5b24e810a6d93f27c04b518ea762",
+      "typology": "sanctioned_entity",
+      "label": "Sample sanctioned-entity match"
+    }
+  ]
+}

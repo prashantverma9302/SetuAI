@@ -249,6 +249,108 @@
         "label_last_seen_days": 11,
         "label_source": "internal_watchlist"
       }
+    },
+    "bc1qrapidmixdemo7w4v9c2n5k8f1r3t6x0a2e4y": {
+      "chain": "BTC",
+      "case_note": "Synthetic risk demo: mixer exposure plus three hops within seven minutes, producing a High tier from two independent rules.",
+      "hops": [
+        {
+          "seq": 1,
+          "chain": "BTC",
+          "from_address": "bc1qrapidmixdemo7w4v9c2n5k8f1r3t6x0a2e4y",
+          "to_address": "bc1qrapidmixhop1000000000000000000000000000000001",
+          "tx_hash": "a810c2743f6b9d125e08a471c2f6d930b5741ce8a2036f971d4b60e5c7a83921",
+          "timestamp": "2026-09-10T10:00:00Z",
+          "value": "0.82",
+          "asset": "BTC",
+          "node_type": "unknown_eoa",
+          "label": null
+        },
+        {
+          "seq": 2,
+          "chain": "BTC",
+          "from_address": "bc1qrapidmixhop1000000000000000000000000000000001",
+          "to_address": "bc1qrapidmixhop2000000000000000000000000000000002",
+          "tx_hash": "b921d3854a7c0e236f19b582d3e7a041c6852df9b3147a086e5c71f6d8a94032",
+          "timestamp": "2026-09-10T10:03:00Z",
+          "value": "0.79",
+          "asset": "BTC",
+          "node_type": "unknown_eoa",
+          "label": null
+        },
+        {
+          "seq": 3,
+          "chain": "BTC",
+          "from_address": "bc1qrapidmixhop2000000000000000000000000000000002",
+          "to_address": "bc1qrapidmixhop3000000000000000000000000000000003",
+          "tx_hash": "c032e4965b8d1f347a20c693e4f8b152d7963e0ac4258b197f6d82a3e9b05143",
+          "timestamp": "2026-09-10T10:07:00Z",
+          "value": "0.76",
+          "asset": "BTC",
+          "node_type": "mixer",
+          "label": "Synthetic mixer fixture"
+        }
+      ],
+      "destination": {
+        "label": "Synthetic mixer fixture",
+        "vasp_name": null,
+        "node_type": "mixer",
+        "jurisdiction": "unknown",
+        "fiu_ind_registered": null,
+        "label_last_seen_days": 1,
+        "label_source": "synthetic_fixture"
+      }
+    },
+    "0x7f3c9a1d5e8b2046c1a79d3f52e608b4a9137c25": {
+      "chain": "ETH",
+      "case_note": "Synthetic risk demo: an intermediate address matches the sample sanctioned-entity watchlist entry, producing a Critical tier.",
+      "hops": [
+        {
+          "seq": 1,
+          "chain": "ETH",
+          "from_address": "0x7f3c9a1d5e8b2046c1a79d3f52e608b4a9137c25",
+          "to_address": "0x6d82f1a9037c5b24e810a6d93f27c04b518ea762",
+          "tx_hash": "d143f5a76c9e2048b3176d0fa4c85219e6307b1c5d9462fa083e7b41c6d29503",
+          "timestamp": "2026-09-11T09:20:00Z",
+          "value": "25000",
+          "asset": "USDT",
+          "node_type": "unknown_eoa",
+          "label": "Sample watchlist address"
+        },
+        {
+          "seq": 2,
+          "chain": "ETH",
+          "from_address": "0x6d82f1a9037c5b24e810a6d93f27c04b518ea762",
+          "to_address": "0x72a4d1c9e6038b5f2a17c4609d3e8b714f2056ca",
+          "tx_hash": "e25406b87da03159c4287e1a5bd96320f7418c2e6a053bd197e8f052d7a31684",
+          "timestamp": "2026-09-11T12:45:00Z",
+          "value": "24900",
+          "asset": "USDT",
+          "node_type": "deposit_address",
+          "label": "Synthetic exchange deposit"
+        },
+        {
+          "seq": 3,
+          "chain": "ETH",
+          "from_address": "0x72a4d1c9e6038b5f2a17c4609d3e8b714f2056ca",
+          "to_address": "0x84b5e2d0f7149c603a28d5710e4f9c825a3167db",
+          "tx_hash": "f36517c98eb14260d5398f2b6ca07431a8529d3f7b164c2089f6031a8eb42795",
+          "timestamp": "2026-09-11T13:12:00Z",
+          "value": "24900",
+          "asset": "USDT",
+          "node_type": "hot_wallet",
+          "label": "Synthetic VASP hot wallet"
+        }
+      ],
+      "destination": {
+        "label": "Synthetic VASP hot wallet",
+        "vasp_name": "Demo VASP",
+        "node_type": "hot_wallet",
+        "jurisdiction": "unknown",
+        "fiu_ind_registered": null,
+        "label_last_seen_days": 2,
+        "label_source": "synthetic_fixture"
+      }
     }
   }
 }

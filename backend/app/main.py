@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
-from . import deadend, report as report_module, scoring, tracer
+from . import deadend, report as report_module, risk_classification, scoring, tracer
 from .models import CaseSummary, ReportRequest, ReportResponse, TraceRequest, TraceResponse
 
 app = FastAPI(
@@ -53,6 +53,7 @@ def _build_trace(wallet_address: str, requested_chain: str) -> dict:
 
     status, recommended_action = deadend.evaluate(hops, destination)
     confidence = scoring.score(hops, destination)
+    risk = risk_classification.classify(hops, destination)
 
     chains_traversed: list[str] = []
     for hop in hops:
@@ -70,6 +71,7 @@ def _build_trace(wallet_address: str, requested_chain: str) -> dict:
         "destination_node_type": deadend.terminal_node_type(hops, destination),
         "confidence": confidence["total"],
         "confidence_breakdown": confidence,
+        "risk_classification": risk,
         "jurisdiction": destination.get("jurisdiction", "unknown"),
         "fiu_ind_registered": destination.get("fiu_ind_registered"),
         "status": status,

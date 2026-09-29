@@ -10,7 +10,7 @@ It just costs confidence (see scoring.py).
 from typing import Any, Dict, List, Optional, Tuple
 
 # Node types that stop a trace when they are the terminal node.
-DEAD_END_NODE_TYPES = {"mixer", "bridge", "dex"}
+DEAD_END_NODE_TYPES = {"mixer", "bridge", "dex", "unlabeled_dex"}
 
 RECOMMENDED_ACTIONS: Dict[str, str] = {
     "mixer": (
@@ -27,6 +27,10 @@ RECOMMENDED_ACTIONS: Dict[str, str] = {
         "Identify the DEX router contract and pivot to the post-swap output "
         "address. Request aggregator or front-end logs if the router is operated "
         "by an identifiable entity."
+    ),
+    "unlabeled_dex": (
+        "Identify the unlabeled DEX router and pivot to the post-swap output "
+        "address before resuming attribution."
     ),
 }
 
