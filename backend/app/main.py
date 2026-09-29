@@ -8,7 +8,7 @@ Endpoints:
   GET  /health           liveness
 """
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
@@ -32,6 +32,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def strip_api_prefix(request: Request, call_next):
+    """Accept requests routed through the shared-domain /api prefix."""
+    path = request.scope["path"]
+    if path == "/api" or path.startswith("/api/"):
+        request.scope["path"] = path[4:] or "/"
+        raw_path = request.scope.get("raw_path")
+        if raw_path and raw_path.startswith(b"/api"):
+            request.scope["raw_path"] = raw_path[4:] or b"/"
+    return await call_next(request)
 
 
 def _build_trace(wallet_address: str, requested_chain: str) -> dict:
