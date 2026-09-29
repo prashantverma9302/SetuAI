@@ -1,4 +1,4 @@
-# SIH26182 — VASP Attribution (prototype)
+# SIH26182 — VASP Attribution (SetuAI)
 
 Takes a wallet address, walks a recorded transaction path, and reports where the
 funds land: which VASP, how confident we are, whether that VASP is domestic or
