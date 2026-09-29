@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 
-const API_BASE = 'http://localhost:8010'
+const API_BASE = '/api'
 const Plot = lazy(async () => {
   const [{ default: createPlotlyComponent }, { default: Plotly }] =
     await Promise.all([
